@@ -1,6 +1,6 @@
-# GolfRoundPro – Project Specification
+# GolfRoundPro – Project Specification (Updated)
 
-This project is a local-only golf round tracking platform designed to help develop skills in Kubernetes, Helm, Kafka, Redis, Rust, React, and overall software architecture. The application tracks rounds, hole-by-hole scores, and generates lightweight analytics.
+This project is a local-only golf round tracking platform designed to help develop skills in Kubernetes, Helm, Kafka, Redis, Rust, React, and overall software architecture. The application tracks rounds, hole-by-hole scores, generates lightweight analytics, and includes secure authentication and secret management.
 
 ---
 
@@ -12,6 +12,8 @@ The scope is intentionally small to allow learning without requiring months of d
 This project will cover:
 - Microservice design
 - Event-driven architecture
+- Authentication & authorization
+- Secret management with Vault
 - Containerization and deployment through Kubernetes & Helm
 - Frontend and backend development
 - Distributed caching and real-time analytics
@@ -22,10 +24,16 @@ This project will cover:
 
 ### Components:
 - **Rust Round Service**
-  REST API for creating rounds, recording hole data, and retrieving round information.
+  REST API for creating rounds, recording hole data, and retrieving round information. Requires authenticated access.
 
 - **Rust Analytics Service**
   Kafka consumer that updates analytics and writes them into Redis for fast retrieval.
+
+- **Auth Service (Rust)**
+  Handles user login, JWT issuance, and token validation. Integrates with Vault for secret storage (e.g., JWT signing keys).
+
+- **Vault**
+  Centralized secret management. Stores JWT keys, database credentials, and other sensitive configuration.
 
 - **PostgreSQL**
   Primary data store for all permanent round and course data.
@@ -43,7 +51,7 @@ This project will cover:
   Local deployment environment.
 
 - **Helm Charts**
-  Used to package and deploy each service along with shared dependencies.
+  Used to package and deploy each service along with shared dependencies, including Vault configuration.
 
 ---
 
@@ -57,12 +65,14 @@ This project will cover:
 - Persist data to PostgreSQL
 - Publish events to Kafka
 - Invalidate Redis cache entries when round data changes
+- Require valid JWT for all user operations
 
 **Skills Learned:**
 - Rust web APIs
 - Database migration & schema design
 - Event publishing
 - Cache-aside patterns
+- Authentication & JWT validation
 - Containerization for K8s
 
 ---
@@ -85,6 +95,21 @@ This project will cover:
 
 ---
 
+### 3.3 Auth Service (Rust)
+**Responsibilities:**
+- Handle user registration and login
+- Issue JWTs for authenticated users
+- Validate JWTs for protected routes
+- Store JWT signing keys securely in Vault
+
+**Skills Learned:**
+- Secure authentication flows
+- JWT management
+- Integration with secret management systems
+- Microservice security patterns
+
+---
+
 ## 4. Datastores
 
 ### 4.1 PostgreSQL
@@ -94,6 +119,7 @@ Permanent system-of-record. Stores:
 - Holes & scores
 - Courses
 - Optional analytics history
+- User accounts (authentication metadata)
 
 **Skills Learned:**
 - Schema design
@@ -114,6 +140,21 @@ Fast access store for:
 - Redis keys & TTL strategy
 - High-speed data access
 - Designing aggregated views for performance
+
+---
+
+### 4.3 Vault
+**Purpose:**
+Secure storage of sensitive data:
+- JWT signing keys
+- Database credentials
+- Any other secrets required by services
+
+**Skills Learned:**
+- Secret management best practices
+- Integration with microservices
+- Secure local deployment using Kubernetes and Helm
+- Handling secret rotation
 
 ---
 
@@ -156,7 +197,7 @@ Fast access store for:
 ## 7. Kubernetes + Helm
 
 ### Kubernetes Responsibilities:
-- Run all services locally (API, analytics, Kafka, Redis, PostgreSQL)
+- Run all services locally (API, analytics, Kafka, Redis, PostgreSQL, Vault)
 - Handle networking, ingress, environment config, scaling options
 
 ### Helm Responsibilities:
@@ -167,25 +208,27 @@ Fast access store for:
   - ConfigMaps
   - Secrets
   - PersistentVolumeClaims
+  - Vault integration & sidecars
 
 **Skills Learned:**
 - Real-world deployment patterns
 - Managing local microservices
 - Versioned infrastructure as code
 - Understanding service discovery & scaling
+- Secret injection via Vault
 
 ---
 
 ## 8. Suggested Technology Interactions
 
 ### Data Write Path:
-1. Frontend submits a score → Round Service
+1. Frontend submits a score → Round Service (authenticated via JWT)
 2. Round Service writes to PostgreSQL
 3. Round Service invalidates Redis cache
 4. Round Service publishes event to Kafka
 
 ### Data Read Path:
-1. Frontend requests round summary
+1. Frontend requests round summary (authenticated via JWT)
 2. Round Service checks Redis
 3. If cached → return value
 4. If miss → read from Postgres → store in Redis → return
@@ -194,6 +237,11 @@ Fast access store for:
 1. Kafka event consumed by Analytics Service
 2. Analytics Service computes stats
 3. Stats stored into Redis for fast frontend reads
+
+### Secret Management Flow:
+1. Vault stores JWT signing keys and database credentials
+2. Services retrieve secrets via Vault Agent, CSI, or External Secrets
+3. Secrets are injected into environment variables or mounted volumes
 
 ---
 
@@ -204,6 +252,8 @@ Fast access store for:
 - Enter hole scores
 - View round summary
 - Basic analytics (average round score)
+- Authenticated access using JWT
+- Vault-managed secrets
 - Deployed fully on local Kubernetes
 
 ### Optional Extensions:
@@ -220,6 +270,8 @@ Fast access store for:
 ### Backend / Systems:
 - Rust microservices
 - Event-driven architecture
+- Authentication & JWT flows
+- Vault secret management
 - Kafka producers/consumers
 - Redis caching & materialized views
 - PostgreSQL schema design
@@ -227,7 +279,7 @@ Fast access store for:
 ### DevOps:
 - Dockerization
 - Kubernetes workloads
-- Helm charts
+- Helm charts with secret integration
 - Local cluster debugging & logs
 
 ### Frontend:
@@ -240,8 +292,9 @@ Fast access store for:
 - Asynchronous pipelines
 - Caching strategies
 - Real-time vs batch analytics
-- Designing services that scale
+- Secure microservice design
+- Secret management patterns
 
 ---
 
-This project is intentionally small but covers a broad range of technologies and design concepts. Completing it results in practical, modern skills while avoiding year-long development time.
+This project now includes **authentication and secure secret handling via Vault**, providing a more complete, realistic distributed microservice experience.
